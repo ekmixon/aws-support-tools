@@ -86,7 +86,11 @@ def main():
           "subdomain":subdomain #The name of the subdomain that got created when you created the OneLogin account.
         }
 
-        headers = {'Authorization': 'bearer:'+access_token,'Content-Type' : 'application/json'}
+        headers = {
+            'Authorization': f'bearer:{access_token}',
+            'Content-Type': 'application/json',
+        }
+
 
         get_saml_assertion = requests.post(url = 'https://api.us.onelogin.com/api/1/saml_assertion',headers = headers,data=json.dumps(payload))
 

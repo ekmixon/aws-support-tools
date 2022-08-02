@@ -22,29 +22,31 @@ sns_topic_arn = os.environ['TOPIC']
 
 def publish_notification(topic_arn, message, subject):
     sns_client = boto3.client('sns', region_name=region)
-    sns_response = sns_client.publish(TopicArn=topic_arn, Message=message, Subject=subject, MessageStructure='string')
-    if sns_response:
-        return 'Notification published successfully. Message id %s' % (sns_response['MessageId'])
+    if sns_response := sns_client.publish(
+        TopicArn=topic_arn,
+        Message=message,
+        Subject=subject,
+        MessageStructure='string',
+    ):
+        return f"Notification published successfully. Message id {sns_response['MessageId']}"
+
     else:
         return 'Failed to publish notification.'
 
 
 def check_quota():
     ses_client = boto3.client('ses', region_name=region)
-    response = ses_client.get_send_quota()
-    if response:
-        daily_quota = response['Max24HourSend']
-        total_sent = response['SentLast24Hours']
-        threshold = total_sent / daily_quota * 100
-        if threshold > alert_threshold:
-            # Quota over threshold. Alert using SNS
-            message = 'Daily sending limit threshold of %d%% has been reached.' % threshold
-            publish_result = publish_notification(sns_topic_arn, message, 'SES daily quota warning')
-            return message + ' ' + publish_result
-        else:
-            return 'Sending quota within threshold.'
-    else:
+    if not (response := ses_client.get_send_quota()):
         return 'Error occurred while getting daily send quota.'
+    daily_quota = response['Max24HourSend']
+    total_sent = response['SentLast24Hours']
+    threshold = total_sent / daily_quota * 100
+    if threshold <= alert_threshold:
+        return 'Sending quota within threshold.'
+    # Quota over threshold. Alert using SNS
+    message = 'Daily sending limit threshold of %d%% has been reached.' % threshold
+    publish_result = publish_notification(sns_topic_arn, message, 'SES daily quota warning')
+    return f'{message} {publish_result}'
 
 
 def lambda_handler(event, context):

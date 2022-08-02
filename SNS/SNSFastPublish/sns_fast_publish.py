@@ -61,7 +61,7 @@ def save_to_s3(data, s3_bucket, s3_key):
     try:
         response = s3.put_object(Bucket=s3_bucket, Key=s3_key, Body=data)
         if 'ResponseMetadata' in response.keys() and response['ResponseMetadata']['HTTPStatusCode'] == 200:
-            print('Saved file in s3://%s/%s' % (s3_bucket, s3_key))
+            print(f'Saved file in s3://{s3_bucket}/{s3_key}')
     except Exception as e:
         print(e)
         raise e
@@ -77,13 +77,16 @@ def log(command):
             end_time = time.time()
         elif command == 'save':
             data = '%f, %f, %f' % (start_time, end_time, end_time-start_time)
-            save_to_s3(data, bucket, key + '_time.log')
+            save_to_s3(data, bucket, f'{key}_time.log')
 
 
 def publish(endpoint, message=None):
     global publish_errors
     target_arn = endpoint['EndpointArn'] if 'EndpointArn' in endpoint.keys() else ''
-    notification_message = message if message else endpoint['Message'] if 'Message' in endpoint.keys() else ''
+    notification_message = message or (
+        endpoint['Message'] if 'Message' in endpoint.keys() else ''
+    )
+
 
     # Get the platform type from the endpoint ARN
     platform = target_arn.split(':')[5].split('/')[1] if len(target_arn) > 0 else ''
@@ -97,13 +100,11 @@ def publish(endpoint, message=None):
             MessageStructure='json'
         )
         if not isinstance(response, dict):  # log failed requests only
-            publish_errors.append('%s, %s, %s' % (current_time(), target_arn, response))
+            publish_errors.append(f'{current_time()}, {target_arn}, {response}')
     except botocore.exceptions.ClientError as e:
-        publish_errors.append('%s, %s, %s, %s' %
-                              (current_time(),
-                               target_arn,
-                               ', '.join("%s=%r" % (k, v) for (k, v) in e.response['ResponseMetadata'].iteritems()),
-                               e.message))
+        publish_errors.append(
+            f"""{current_time()}, {target_arn}, {', '.join(("%s=%r" % (k, v) for (k, v) in e.response['ResponseMetadata'].iteritems()))}, {e.message}"""
+        )
 
 
 def lambda_handler(event, context):
@@ -133,7 +134,7 @@ def lambda_handler(event, context):
             e.submit(publish, endpoint, message)
         e.shutdown()
     except Exception as e:
-        print(e.message + ' Aborting...')
+        print(f'{e.message} Aborting...')
         raise e
 
     print('Publish complete.')
@@ -145,7 +146,7 @@ def lambda_handler(event, context):
     try:
         response = s3.delete_object(Bucket=bucket, Key=key)
         if 'ResponseMetadata' in response.keys() and response['ResponseMetadata']['HTTPStatusCode'] == 204:
-            print('Removed s3://%s/%s' % (bucket, key))
+            print(f'Removed s3://{bucket}/{key}')
     except Exception as e:
         print(e)
 

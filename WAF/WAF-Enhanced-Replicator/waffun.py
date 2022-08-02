@@ -21,14 +21,17 @@ def getVersion():
     '''
     Prints the composite of current version and build date.
     '''
-    return (versionNumber + " | " + versionBuild)
+    return f"{versionNumber} | {versionBuild}"
 
 def header():
     '''
     Prints Utility's Header.
     '''
-    headerMessage = "WAFER - AWS WAF Enhanced Replicator - Version " + getVersion() + "\n" \
-                    "This utility works with WAF v1 (classical) only.\n"
+    headerMessage = (
+        f"WAFER - AWS WAF Enhanced Replicator - Version {getVersion()}" + "\n"
+        "This utility works with WAF v1 (classical) only.\n"
+    )
+
     print(headerMessage)
 
 def usage():
@@ -67,20 +70,20 @@ def validateArguments():
     if ("global" in parameters) and ("regional" in parameters):
         return([usage(), "", ""])
 
-    if (not "global" in parameters) and (not "regional" in parameters):
+    if "global" not in parameters and "regional" not in parameters:
         return([usage(), "", ""])
-    
+
     webAcl = ""
     if '--web-acl' in parameters:
         webacl_idx = parameters.index('--web-acl') + 1
         webAcl = parameters[webacl_idx]
-    
+
     if "global" in parameters:
         return([1, "", webAcl])
 
     region = ""
     if "regional" in parameters:
-        if not "--region" in parameters:
+        if "--region" not in parameters:
             return([usage(), "", ""])
         region_idx = parameters.index('--region') + 1
         region = parameters[region_idx]
@@ -106,25 +109,40 @@ def getHomeConfig():
         try:
             os.mkdir(home)
         except:
-            print("Unable to create configuration directory! Check permissions or disk usage on " + home + ".\n", file=sys.stderr)
+            print(
+                f"Unable to create configuration directory! Check permissions or disk usage on {home}"
+                + ".\n",
+                file=sys.stderr,
+            )
+
             sys.exit (-1)
-    
+
     templatesDir = home + separator + "templates"
     if not os.path.exists(templatesDir):
         try:
             os.mkdir(templatesDir)
         except:
-            print("Unable to create templates directory " + templatesDir + "! Check permissions or disk usage.\n", file=sys.stderr)
+            print(
+                f"Unable to create templates directory {templatesDir}"
+                + "! Check permissions or disk usage.\n",
+                file=sys.stderr,
+            )
+
             sys.exit (-1)
-    
+
     logsDir = home + separator + "logs"
     if not os.path.exists(logsDir):
         try:        
             os.mkdir(logsDir)
         except:
-            print("Unable to create logs directory " + logsDir + "! Check permissions or disk usage.\n", file=sys.stderr)
+            print(
+                f"Unable to create logs directory {logsDir}"
+                + "! Check permissions or disk usage.\n",
+                file=sys.stderr,
+            )
+
             sys.exit (-1)
-    
+
     uniqueId = str(uuid.uuid4())
     uniqueLogName = logsDir + separator + "wafer-log-" + uniqueId + ".log"
 
@@ -134,7 +152,7 @@ def getHomeConfig():
             uniqueLogName = logsDir + separator + "wafer-log-" + uniqueId + ".log"
     uniqueTemplateName = templatesDir + separator + "wafer-tf-" + uniqueId + ".tf"
     uniqueZipFile = home + separator + "wafer-pkg-" + uniqueId + ".zip"
-    
+
     return ([uniqueLogName, uniqueTemplateName, uniqueZipFile])
 
 def getFormattedDateTime():
@@ -148,10 +166,14 @@ def abortMission(logFile, templateFile, apiCall):
     Closes the log and template files, throws an error message and exits with -1.
     '''
     if len(apiCall) > 0:
-        print("*** Failure on making API call: {}! ***".format(apiCall), file=sys.stderr)
-        logFile.write(getFormattedDateTime() + "*** Failure on making API call: " + apiCall + "! ***\n")
+        print(f"*** Failure on making API call: {apiCall}! ***", file=sys.stderr)
+        logFile.write(
+            f"{getFormattedDateTime()}*** Failure on making API call: {apiCall}"
+            + "! ***\n"
+        )
+
     print("*** Aborting program execution. ***\n", file=sys.stderr)
-    logFile.write(getFormattedDateTime() + "End of Log.")
+    logFile.write(f"{getFormattedDateTime()}End of Log.")
     logFile.close()
     templateFile.close()
     sys.exit(-1)

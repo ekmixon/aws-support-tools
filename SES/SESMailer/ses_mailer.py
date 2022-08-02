@@ -74,13 +74,11 @@ def send_mail(from_address, to_address, message):
             }
         )
         if not isinstance(response, dict):  # log failed requests only
-            send_errors.append('%s, %s, %s' % (current_time(), to_address, response))
+            send_errors.append(f'{current_time()}, {to_address}, {response}')
     except botocore.exceptions.ClientError as e:
-        send_errors.append('%s, %s, %s, %s' %
-                           (current_time(),
-                               to_address,
-                               ', '.join("%s=%r" % (k, v) for (k, v) in e.response['ResponseMetadata'].iteritems()),
-                               e.message))
+        send_errors.append(
+            f"""{current_time()}, {to_address}, {', '.join(("%s=%r" % (k, v) for (k, v) in e.response['ResponseMetadata'].iteritems()))}, {e.message}"""
+        )
 
 
 def lambda_handler(event, context):
@@ -102,13 +100,13 @@ def lambda_handler(event, context):
             mime_message_text = response['Body'].read()
         except:
             mime_message_text = None
-            print('Failed to read text message file. Did you upload %s?' % text_message_file)
+            print(f'Failed to read text message file. Did you upload {text_message_file}?')
         try:
             response = s3.get_object(Bucket=bucket, Key=html_message_file)
             mime_message_html = response['Body'].read()
         except:
             mime_message_html = None
-            print('Failed to read html message file. Did you upload %s?' % html_message_file)
+            print(f'Failed to read html message file. Did you upload {html_message_file}?')
 
         if not mime_message_text and not mime_message_html:
             raise ValueError('Cannot continue without a text or html message file.')
@@ -122,7 +120,7 @@ def lambda_handler(event, context):
                 message = mime_email(subject, from_address, to_address, mime_message_text, mime_message_html)
                 e.submit(send_mail, from_address, to_address, message)
     except Exception as e:
-        print(e.message + ' Aborting...')
+        print(f'{e.message} Aborting...')
         raise e
 
     print('Send email complete.')
@@ -131,7 +129,7 @@ def lambda_handler(event, context):
     try:
         response = s3.delete_object(Bucket=bucket, Key=key)
         if 'ResponseMetadata' in response.keys() and response['ResponseMetadata']['HTTPStatusCode'] == 204:
-            print('Removed s3://%s/%s' % (bucket, key))
+            print(f'Removed s3://{bucket}/{key}')
     except Exception as e:
         print(e)
 
@@ -142,7 +140,7 @@ def lambda_handler(event, context):
             logfile_key = key.replace('.csv.gz', '') + '_error.log'
             response = s3.put_object(Bucket=bucket, Key=logfile_key, Body=result_data)
             if 'ResponseMetadata' in response.keys() and response['ResponseMetadata']['HTTPStatusCode'] == 200:
-                print('Send email errors saved in s3://%s/%s' % (bucket, logfile_key))
+                print(f'Send email errors saved in s3://{bucket}/{logfile_key}')
         except Exception as e:
             print(e)
             raise e

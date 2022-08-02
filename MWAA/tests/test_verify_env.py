@@ -70,7 +70,7 @@ def test_validation_region():
     for unsupport_region in unsupport_regions:
         with pytest.raises(argparse.ArgumentTypeError) as excinfo:
             verify_env.validation_region(unsupport_region)
-        assert ("%s is an invalid REGION value" % unsupport_region) in str(excinfo.value)
+        assert f"{unsupport_region} is an invalid REGION value" in str(excinfo.value)
     bad_regions = [
         'us-east-11',
         'us-west-3',
@@ -79,7 +79,7 @@ def test_validation_region():
     for region in bad_regions:
         with pytest.raises(argparse.ArgumentTypeError) as excinfo:
             verify_env.validation_region(region)
-        assert ("%s is an invalid REGION value" % region) in str(excinfo.value)
+        assert f"{region} is an invalid REGION value" in str(excinfo.value)
 
 
 def test_validate_envname():
@@ -89,7 +89,7 @@ def test_validate_envname():
     with pytest.raises(argparse.ArgumentTypeError) as excinfo:
         env_name = '42'
         verify_env.validate_envname(env_name)
-    assert ("%s is an invalid environment name value" % env_name) in str(excinfo.value)
+    assert f"{env_name} is an invalid environment name value" in str(excinfo.value)
     env_name = 'test'
     result = verify_env.validate_envname(env_name)
     assert result == env_name
@@ -102,7 +102,7 @@ def test_validate_profile():
     with pytest.raises(argparse.ArgumentTypeError) as excinfo:
         profile_name = 'test space'
         verify_env.validation_profile(profile_name)
-    assert ("%s is an invalid profile name value" % profile_name) in str(excinfo.value)
+    assert f"{profile_name} is an invalid profile name value" in str(excinfo.value)
     profile_name = 'test'
     result = verify_env.validation_profile(profile_name)
     assert result == profile_name
@@ -204,7 +204,7 @@ def test_check_egress_acls():
 # S3 public access tests
 
 TEST_BUCKET_NAME = 'TestBucket'
-TEST_BUCKET_ARN = 'arn:aws:s3:::' + TEST_BUCKET_NAME
+TEST_BUCKET_ARN = f'arn:aws:s3:::{TEST_BUCKET_NAME}'
 TEST_ACCOUNT_REGION = 'us-east-1'
 TEST_ACCOUNT_ID = os.getenv('MOTO_ACCOUNT_ID')
 assert TEST_ACCOUNT_ID, "Please export a moto account id, see README for details"

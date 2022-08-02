@@ -14,21 +14,17 @@ print ("Starting program...\n")
 def get_indices():
 
     ##### Variable Declarations
-    esEndpoint="http://"+sys.argv[1]+"/"
+    esEndpoint = f"http://{sys.argv[1]}/"
 
-    indicesList=[]
     creationTimes=[]
     removeElements=[]
     temp_list = []
     # get the list of all available indices.
-    indices = requests.get(esEndpoint+"_cat/indices")
+    indices = requests.get(f"{esEndpoint}_cat/indices")
     result = indices.text.split('\n')
     del result[-1]
 
-    for line in result:
-        indicesList.append(line.split()[2])
-
-
+    indicesList = [line.split()[2] for line in result]
     # remove the .kibana4 (or ".kibana" in ES 5.1) index from the list as it is a required/default index in ES.
     if ".kibana-4" in indicesList:
         indicesList.remove(".kibana-4")
@@ -38,15 +34,15 @@ def get_indices():
 
 
     # get the creation times for the indices.
-    for i in range (0,len(indicesList)):
-        cdates = requests.get(esEndpoint+indicesList[i])
+    for item in indicesList:
+        cdates = requests.get(esEndpoint + item)
         cdates2 = cdates.json()
-        creationTimes.append(cdates2[indicesList[i]]['settings']['index']['creation_date'])
+        creationTimes.append(cdates2[item]['settings']['index']['creation_date'])
 
 
     print ("\n\nEpoch Timestamps in human readable format are: ")
     print ("IndexName\t\tCreationTime (Epoch)\tCreationTime (Human Readable - UTC)")
-    for i in range (0,len(creationTimes)):
+    for i in range(len(creationTimes)):
         print (indicesList[i]+": \t\t"+creationTimes[i]+"\t\t"+datetime.datetime.fromtimestamp(float(creationTimes[i]) / 1000).strftime('%Y-%m-%d %H:%M:%S'))
     print ("")
 
@@ -91,7 +87,7 @@ removeElements = list_l[2]
 esEndpoint = list_l[3]
 
 # check the element values to see if they are outside the threshold time. Add the index element numbers to an array.
-for i in range (0, len(creationTimes)):
+for i in range(len(creationTimes)):
     if checkTime > int(creationTimes[i]):
         removeElements.append(i)
 
@@ -112,7 +108,7 @@ else:
 print ("\n\nAre you sure that you have taken a manual snapshot? (Yes/No)")
 print ("> ", end="")
 choice = raw_input().upper()
-if ((choice == 'Y') or (choice == 'YES') or (choice == 'yes') or (choice == 'y')):
+if choice in ['Y', 'YES', 'yes', 'y']:
 
     # Index candidates found for deletion. Continuing on with the program.
     print ("\n\nAre you sure you wish to remove indices that were created before this threshold value? (Yes/No)")
@@ -121,12 +117,12 @@ if ((choice == 'Y') or (choice == 'YES') or (choice == 'yes') or (choice == 'y')
     choice = raw_input().upper()
 
 
-    if ((choice == 'Y') or (choice == 'YES')):
+    if choice in ['Y', 'YES']:
         #remove the indices
         print ("Removing the indices...")
         for element in removeElements:
             delete = requests.delete(esEndpoint+indicesList[element])
-            print ("Index removed: "+indicesList[element])
+            print(f"Index removed: {indicesList[element]}")
 
         print("\nIndices successfully removed.")
         print ("-------------------\n\n")

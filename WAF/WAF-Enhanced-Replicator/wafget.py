@@ -19,7 +19,7 @@ def stageFile(fileName):
     try:
         dummyFile = open(fileName, 'w')
     except:
-        print("*** Unable to create the file " + fileName + "! ***\n", file=sys.stderr)
+        print(f"*** Unable to create the file {fileName}" + "! ***\n", file=sys.stderr)
         sys.exit(-1)
     else:
         return (dummyFile)

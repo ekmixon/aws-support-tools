@@ -26,15 +26,16 @@ def look_for_resource_methods(apiid, resource):
             resourceId=resource["id"],
             httpMethod=method)
 
-            if "methodIntegration" in methodintegration:
-                #print(methodIntegration)
-                if ("connectionType" in methodintegration["methodIntegration"] and
-                methodintegration["methodIntegration"]["connectionType"] == 'VPC_LINK'):
-                    print("        API ID='{0}'   Resource ID='{1}'   Resource Path='{2}'   "
-                    "HttpMethod='{3}' ConnectionType='{4}' ConnectionId='{5}'".format(
-                        apiid, resource["id"], resource["path"], methodintegration["httpMethod"],
-                        methodintegration["methodIntegration"]["connectionType"],
-                        methodintegration["methodIntegration"]["connectionId"]))
+            if "methodIntegration" in methodintegration and (
+                "connectionType" in methodintegration["methodIntegration"]
+                and methodintegration["methodIntegration"]["connectionType"]
+                == 'VPC_LINK'
+            ):
+                print("        API ID='{0}'   Resource ID='{1}'   Resource Path='{2}'   "
+                "HttpMethod='{3}' ConnectionType='{4}' ConnectionId='{5}'".format(
+                    apiid, resource["id"], resource["path"], methodintegration["httpMethod"],
+                    methodintegration["methodIntegration"]["connectionType"],
+                    methodintegration["methodIntegration"]["connectionId"]))
 
 def look_for_resources(apiid, resources):
     """Loop through API resources"""
@@ -57,7 +58,7 @@ def look_for_vpc_links():
 
         # Loop through APIs
         for api in response["items"]:
-            print("    LISTING FOR API = %s" % api["id"])
+            print(f'    LISTING FOR API = {api["id"]}')
             apiid = api["id"]
             resources = client.get_resources(restApiId=apiid)
 

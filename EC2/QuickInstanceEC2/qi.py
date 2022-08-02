@@ -44,20 +44,15 @@ def main():
     except:
         usage()
         sys.exit(2)
-    if len(args) > 0:
-        if args[0] == 'configure':
-            configure()
-        elif args[0] in os_list:
-            try:
-                launch(opts, args[0])
-            except NoCredentialsError:
-                advise_credentials()
-            except:
-                troubleshoot()
-        elif args[0] == 'help':
-            usage()
-        else:
-            usage()
+    if len(args) > 0 and args[0] == 'configure':
+        configure()
+    elif len(args) > 0 and args[0] in os_list:
+        try:
+            launch(opts, args[0])
+        except NoCredentialsError:
+            advise_credentials()
+        except:
+            troubleshoot()
     else:
         usage()
 
@@ -113,19 +108,19 @@ def configure():
         elif prompt_index == 2:
             resource_list = get_roles()
             display_list(resource_list, 'RoleName')
-        elif prompt_index in [3, 4]:
+        elif prompt_index in {3, 4}:
             resource_list = get_key_pairs(config['region'])
             display_list(resource_list, 'KeyName')
-        elif prompt_index in [6, 7]:
+        elif prompt_index in {6, 7}:
             resource_list = get_images(config['region'], ['amazon'], False)
             display_list(resource_list, 'ImageId', 'CreationDate', 'Description')
-        elif prompt_index in [8]:
+        elif prompt_index in {8}:
             resource_list = get_images(config['region'], [ubuntu_account], False)
             display_list(resource_list, 'ImageId', 'CreationDate', 'Name')
-        elif prompt_index in [9]:
+        elif prompt_index in {9}:
             resource_list = get_images(config['region'], [redhat_account], False)
             display_list(resource_list, 'ImageId', 'CreationDate', 'Name')
-        elif prompt_index in [10, 11]:
+        elif prompt_index in {10, 11}:
             resource_list = get_images(config['region'], ['amazon'], True)
             display_list(resource_list, 'ImageId', 'CreationDate', 'Description')
         else:
@@ -135,38 +130,38 @@ def configure():
                 response = raw_input(prompt['question'])
             else:
                 response = input(prompt['question'])
-            if prompt_index in [1, 5]:  # allow blank entry for instance type and volume size
+            if prompt_index in {1, 5}:  # allow blank entry for instance type and volume size
                 break
             if response.strip():
-                if is_number(response) and prompt['fetch']:
-                    if int(response)-1 >= 0 and int(response)-1 < len(resource_list):
-                        break
-                else:
+                if not is_number(response) or not prompt['fetch']:
+                    break
+                if int(response) >= 1 and int(response) - 1 < len(
+                    resource_list
+                ):
                     break
         if is_number(response):
             if prompt_index == 0:
                 config[prompt['id']] = resource_list[int(response)-1]['RegionName']
             elif prompt_index == 2:
                 config[prompt['id']] = resource_list[int(response)-1]['RoleName']
-            elif prompt_index in [3, 4]:
+            elif prompt_index in {3, 4}:
                 config[prompt['id']] = resource_list[int(response)-1]['KeyName']
             elif prompt_index == 5:
                 config[prompt['id']] = response.strip()
-            elif prompt_index in [6, 7]:
+            elif prompt_index in {6, 7}:
                 config[prompt['id']] = resource_list[int(response)-1]['ImageId']
-            elif prompt_index in [8]:
+            elif prompt_index in {8}:
                 config[prompt['id']] = resource_list[int(response)-1]['ImageId']
-            elif prompt_index in [9]:
+            elif prompt_index in {9}:
                 config[prompt['id']] = resource_list[int(response)-1]['ImageId']
-            elif prompt_index in [10, 11]:
+            elif prompt_index in {10, 11}:
                 config[prompt['id']] = resource_list[int(response)-1]['ImageId']
+        elif prompt_index == 1 and not response.rstrip():
+            config[prompt['id']] = 't2.micro'  # default to t2.micro if blank entry
+        elif prompt_index == 5 and not response.rstrip():
+            config[prompt['id']] = 30  # default to 30GB for volume if left blank
         else:
-            if prompt_index == 1 and not response.rstrip():
-                config[prompt['id']] = 't2.micro'  # default to t2.micro if blank entry
-            elif prompt_index == 5 and not response.rstrip():
-                config[prompt['id']] = 30  # default to 30GB for volume if left blank
-            else:
-                config[prompt['id']] = response.strip()
+            config[prompt['id']] = response.strip()
     json.dump(config, open(conf_file, 'w'))
 
 
@@ -186,7 +181,7 @@ def get_instance_properties(opts, stack_name):
         if opt[0][2:] == 'bootstrap':
             saved_conf[opt[0][2:]] = opt[1]
         if opt[0][2:] == 'ami':
-            saved_conf['ami-' + stack_name] = opt[1]
+            saved_conf[f'ami-{stack_name}'] = opt[1]
         if opt[0][2:] in saved_conf:
             saved_conf[opt[0][2:]] = opt[1]
             if opt[0][2:] == 'key': saved_conf['key-windows'] = opt[1]
@@ -202,8 +197,8 @@ def get_instance_properties(opts, stack_name):
         saved_conf['user'] = 'ubuntu'
     else:
         saved_conf['user'] = 'ec2-user'
-    saved_conf['ami'] = saved_conf['ami-' + stack_name]
-    if not 'bootstrap' in saved_conf:
+    saved_conf['ami'] = saved_conf[f'ami-{stack_name}']
+    if 'bootstrap' not in saved_conf:
         saved_conf['bootstrap'] = ''
     return saved_conf
 
@@ -211,7 +206,7 @@ def get_instance_properties(opts, stack_name):
 def launch(opts, stack_name):
     prop = get_instance_properties(opts, stack_name)
     region = prop['region']
-    print('Launching instance %s... ' % stack_name)
+    print(f'Launching instance {stack_name}... ')
     output = create_stack(stack_name, get_template(prop, stack_name), region)
     if output == 'STACK_ALREADY_EXISTS':
         status = get_stack_state(stack_name, region).stack_status
@@ -254,10 +249,10 @@ def create_stack(stack_name, template, region):
 def delete_stack(stack_name, region):
     try:
         cf = boto3.client('cloudformation', region_name=region)
-        print('Terminating %s...' % stack_name)
+        print(f'Terminating {stack_name}...')
         response = cf.delete_stack(StackName=stack_name)
     except:
-        print('Failed to terminate %s.' % stack_name)
+        print(f'Failed to terminate {stack_name}.')
         get_stack_events(stack_name, region)
         return response
     return response
@@ -318,19 +313,32 @@ def get_instance_detail(instance_id, stack_name, key, username, region):
 
 
 def get_template(prop, stack_name):
-    security_group = {}
-    security_group['Type'] = 'AWS::EC2::SecurityGroup'
-    security_group['Properties'] = {}
+    security_group = {'Type': 'AWS::EC2::SecurityGroup', 'Properties': {}}
     security_group['Properties']['GroupDescription'] = 'Enable required inbound ports.'
-    ingress_rules = []
     login_port = '3389' if 'windows' in stack_name else '22'
-    ingress_rules.append({"IpProtocol": "tcp", "FromPort": login_port, "ToPort": login_port, "CidrIp": "0.0.0.0/0"})
-    ingress_rules.append({"IpProtocol": "tcp", "FromPort": "80", "ToPort": "80", "CidrIp": "0.0.0.0/0"})
-    ingress_rules.append({"IpProtocol": "tcp", "FromPort": "443", "ToPort": "443", "CidrIp": "0.0.0.0/0"})
+    ingress_rules = [
+        {
+            "IpProtocol": "tcp",
+            "FromPort": login_port,
+            "ToPort": login_port,
+            "CidrIp": "0.0.0.0/0",
+        },
+        {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0",
+        },
+        {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "0.0.0.0/0",
+        },
+    ]
+
     security_group['Properties']['SecurityGroupIngress'] = ingress_rules
-    ec2_instance = {}
-    ec2_instance['Type'] = 'AWS::EC2::Instance'
-    ec2_instance['Properties'] = {}
+    ec2_instance = {'Type': 'AWS::EC2::Instance', 'Properties': {}}
     ec2_instance['Properties']['BlockDeviceMappings'] = [
         {'DeviceName': prop['device'],'Ebs': {'VolumeSize': prop['volume'], 'VolumeType': 'gp2'}}
     ]
@@ -341,18 +349,21 @@ def get_template(prop, stack_name):
     ec2_instance['Properties']['SecurityGroupIds'] = [{'Ref': 'InstanceSecurityGroup'}]
     ec2_instance['Properties']['Tags'] = [{'Key': 'Name', 'Value': stack_name}]
     ec2_instance['Properties']['UserData'] = {'Fn::Base64': '#!/bin/bash\n' + prop['bootstrap']}
-    resources = {}
-    resources['InstanceSecurityGroup'] = security_group
-    resources['Ec2Instance'] = ec2_instance
-    outputs = {}
-    outputs['InstanceId'] = {}
+    resources = {
+        'InstanceSecurityGroup': security_group,
+        'Ec2Instance': ec2_instance,
+    }
+
+    outputs = {'InstanceId': {}}
     outputs['InstanceId']['Value'] = {'Ref': 'Ec2Instance'}
     outputs['InstanceId']['Description'] = 'Instance Id of newly created instance.'
-    template = {}
-    template['AWSTemplateFormatVersion'] = '2010-09-09'
-    template['Description'] = 'Launched using quick instance script'
-    template['Resources'] = resources
-    template['Outputs'] = outputs
+    template = {
+        'AWSTemplateFormatVersion': '2010-09-09',
+        'Description': 'Launched using quick instance script',
+        'Resources': resources,
+        'Outputs': outputs,
+    }
+
     return json.dumps(template)
 
 

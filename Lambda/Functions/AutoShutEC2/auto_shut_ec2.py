@@ -28,19 +28,17 @@ def get_instances(ec2_client):
     response = ec2_client.describe_instances()
     instance_list = []
     for reservation in response['Reservations']:
-        for instance in reservation['Instances']:
-            instance_list.append(instance)
+        instance_list.extend(iter(reservation['Instances']))
     return instance_list
 
 
 def shutdown_instance(region, instance_id):
     ec2 = boto3.resource('ec2', region_name=region)
     instance = ec2.Instance(instance_id)
-    response = instance.stop()
-    if response:
-        return "Successfully shutdown instance {}\n".format(instance_id)
+    if response := instance.stop():
+        return f"Successfully shutdown instance {instance_id}\n"
     else:
-        return "Failed to shutdown instance {}\n".format(instance_id)
+        return f"Failed to shutdown instance {instance_id}\n"
 
 
 def look_for_instances():
@@ -48,7 +46,7 @@ def look_for_instances():
     for region in get_regions():
         region_name = region['RegionName']
         ec2_client = boto3.client('ec2', region_name=region_name)
-        output += 'Looking for running instances in {}\n'.format(region_name)
+        output += f'Looking for running instances in {region_name}\n'
         for instance in get_instances(ec2_client):
             instance_id = instance['InstanceId']
             if instance['State']['Name'] == 'running':
@@ -60,7 +58,7 @@ def look_for_instances():
                     else:
                         shutdown = True
                 if shutdown:
-                    output += 'Shutting down running instance {}\n'.format(instance_id)
+                    output += f'Shutting down running instance {instance_id}\n'
                     output += shutdown_instance(region_name, instance_id)
     return output
 

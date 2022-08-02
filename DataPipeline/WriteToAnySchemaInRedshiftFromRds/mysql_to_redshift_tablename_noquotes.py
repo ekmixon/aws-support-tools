@@ -33,8 +33,6 @@ def file_len(filename):
     """
     with open(filename) as f:
         i = 0
-        for i, l in enumerate(f):
-            pass
     return i + 1
 
 
@@ -310,7 +308,7 @@ if __name__ == "__main__":
                                    ["input_file=", "output_file=", "table_name=", "dist_key=", "sort_keys=",
                                     "map_types=", "insert_mode="])
     except getopt.GetoptError as e:
-        print (str(e))
+        print(e)
         usage()
         sys.exit(2)
 
@@ -334,9 +332,10 @@ if __name__ == "__main__":
     if map_types and not map_types.isspace():
         map_types_dict_temp = dict([arg.split(':') for arg in map_types.lower().lstrip().split(',')])
         #sanitize keys to strip whitespaces
-        map_types_dict = dict()
-        for key in map_types_dict_temp:
-            map_types_dict[key.lstrip().rstrip()] = map_types_dict_temp[key]
+        map_types_dict = {
+            key.lstrip().rstrip(): map_types_dict_temp[key]
+            for key in map_types_dict_temp
+        }
 
     parse(input_file, output_file, gen_table_name, dist_key, sort_keys, map_types_dict)
     sys.exit(0)

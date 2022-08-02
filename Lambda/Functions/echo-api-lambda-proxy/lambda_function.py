@@ -27,17 +27,18 @@ def lambda_handler(event, context):
         'Lambda-Request-ID': context.aws_request_id
     }
     response_body = dumps(event)  # (str, bytes) Optional
-    response_body_is_binary = False  # (boolean) Optional
-
     # Build the response object
     api_response = {'statusCode': status_code}
     if response_headers is not None:
         api_response['headers'] = response_headers
-    if response_body is not None and response_body_is_binary is True:
-        api_response['body'] = b64encode(response_body)
-        api_response['isBase64Encoded'] = True
-    elif response_body is not None:
-        api_response['body'] = response_body
+    if response_body is not None:
+        response_body_is_binary = False  # (boolean) Optional
+
+        if response_body_is_binary:
+            api_response['body'] = b64encode(response_body)
+            api_response['isBase64Encoded'] = True
+        else:
+            api_response['body'] = response_body
 
     # Return the response object
     return api_response

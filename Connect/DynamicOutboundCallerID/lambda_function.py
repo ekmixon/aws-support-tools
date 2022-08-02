@@ -49,8 +49,10 @@ def lambda_handler(event, context):
             raise KeyError("BUCKET_NAME")
         if(os.environ["COUNTRY_ROUTING_LIST_KEY"] == ""):
             raise KeyError("COUNTRY_ROUTING_LIST_KEY")
-        logger.info("Bucket: {} Key: {}".format(
-            os.environ["BUCKET_NAME"], os.environ["COUNTRY_ROUTING_LIST_KEY"]))
+        logger.info(
+            f'Bucket: {os.environ["BUCKET_NAME"]} Key: {os.environ["COUNTRY_ROUTING_LIST_KEY"]}'
+        )
+
     except KeyError as err:
         if(str(err) == "\'BUCKET_NAME\'"):
             logger.error(
@@ -58,8 +60,10 @@ def lambda_handler(event, context):
         if(str(err) == "\'COUNTRY_ROUTING_LIST_KEY\'"):
             logger.error(
                 "Cannot read the environment variable \"COUNTRY_ROUTING_LIST_KEY\". Have you set it up properly?")
-        logger.error("Assigning the default outbound number ({}) from {} for the queue as the outbound number.".format(
-            default_queue_outbound_no, default_queue_outbound_country))
+        logger.error(
+            f"Assigning the default outbound number ({default_queue_outbound_no}) from {default_queue_outbound_country} for the queue as the outbound number."
+        )
+
         response = {
             "customer_number": customer_no,
             "customer_country": customer_country,
@@ -70,36 +74,47 @@ def lambda_handler(event, context):
         }
         numObj = phonenumbers.parse(response["outbound_number"])
         if not phonenumbers.is_valid_number(numObj) and e164_format.match(response["outbound_number"]) == False:
-            logger.error("Outbound number {} is not valid.".format(
-                response["outbound_number"]))
+            logger.error(f'Outbound number {response["outbound_number"]} is not valid.')
             return None
         return response
     try:
-        logger.info("Attempt to get country routing list \"{}\" from bucket \"{}\".".format(
-            os.environ["COUNTRY_ROUTING_LIST_KEY"], os.environ["BUCKET_NAME"]))
+        logger.info(
+            f'Attempt to get country routing list \"{os.environ["COUNTRY_ROUTING_LIST_KEY"]}\" from bucket \"{os.environ["BUCKET_NAME"]}\".'
+        )
+
         country_routing_list = json.loads(s3.Object(
             os.environ["BUCKET_NAME"], os.environ["COUNTRY_ROUTING_LIST_KEY"]).get()["Body"].read().decode("utf-8"))
         logger.info("Download completed.")
     except botocore.exceptions.ClientError:
-        logger.error("Cannot access bucket \"{}\" and key \"{}\". Does the Lambda function have relevant permissions? Does the S3 bucket and/or object exist?".format(
-            os.environ["BUCKET_NAME"], os.environ["COUNTRY_ROUTING_LIST_KEY"]))
+        logger.error(
+            f'Cannot access bucket \"{os.environ["BUCKET_NAME"]}\" and key \"{os.environ["COUNTRY_ROUTING_LIST_KEY"]}\". Does the Lambda function have relevant permissions? Does the S3 bucket and/or object exist?'
+        )
+
         return None
     except Exception as err:
-        logger.error("Cannot get country routing list from S3 bucket \"{}\" with key \"{}\".\nError: {}".format(
-            os.environ["BUCKET_NAME"], os.environ["COUNTRY_ROUTING_LIST_KEY"], err))
+        logger.error(
+            f'Cannot get country routing list from S3 bucket \"{os.environ["BUCKET_NAME"]}\" with key \"{os.environ["COUNTRY_ROUTING_LIST_KEY"]}\".\nError: {err}'
+        )
+
         return None
     if customer_country in country_routing_list:
         try:
             outbound_no = country_routing_list[customer_country]
             outbound_country = phonenumbers.phonenumberutil.region_code_for_country_code(
                 phonenumbers.parse(outbound_no).country_code)
-            logger.info("Country {} have set up an outbound number. Assigning the number ({}) from {} as the outbound number.".format(
-                customer_country, outbound_no, outbound_country))
+            logger.info(
+                f"Country {customer_country} have set up an outbound number. Assigning the number ({outbound_no}) from {outbound_country} as the outbound number."
+            )
+
         except Exception:
-            logger.error("Cannot parse the default number in the country routing list file. Does the value for key \"{}\" exist?".format(
-                customer_country))
-            logger.error("Assigning the number set for the default queue ({}) as the outbound number.".format(
-                default_queue_outbound_no))
+            logger.error(
+                f'Cannot parse the default number in the country routing list file. Does the value for key \"{customer_country}\" exist?'
+            )
+
+            logger.error(
+                f"Assigning the number set for the default queue ({default_queue_outbound_no}) as the outbound number."
+            )
+
             outbound_no = default_queue_outbound_no
             outbound_country = default_queue_outbound_country
     else:
@@ -107,13 +122,17 @@ def lambda_handler(event, context):
             outbound_no = country_routing_list["Default"]
             outbound_country = phonenumbers.phonenumberutil.region_code_for_country_code(
                 phonenumbers.parse(outbound_no).country_code)
-            logger.info("Country {} have not set up an outbound number. Assigning the Default number ({}) from {} as the outbound number.".format(
-                customer_country, outbound_no, outbound_country))
+            logger.info(
+                f"Country {customer_country} have not set up an outbound number. Assigning the Default number ({outbound_no}) from {outbound_country} as the outbound number."
+            )
+
         except Exception:
             logger.error(
                 "Cannot parse the default number in the country routing list file. Does the value for/or key \"Default\" exist?")
-            logger.error("Assigning the number set for the default queue ({}) as the outbound number.".format(
-                default_queue_outbound_no))
+            logger.error(
+                f"Assigning the number set for the default queue ({default_queue_outbound_no}) as the outbound number."
+            )
+
             outbound_no = default_queue_outbound_no
             outbound_country = default_queue_outbound_country
     response = {
@@ -126,10 +145,11 @@ def lambda_handler(event, context):
     }
     numObj = phonenumbers.parse(response["outbound_number"])
     if not phonenumbers.is_valid_number(numObj) and e164_format.match(response["outbound_number"]) == False:
-            logger.error("Outbound number {} is not valid.".format(
-                response["outbound_number"]))
-            return None
-    if(outbound_no != default_queue_outbound_no):
-        logger.info("If the outbound number ({}) is not claimed in your Amazon Connect instance, the number set for the default queue will be used ({}).".format(
-            outbound_no, default_queue_outbound_no))
+        logger.error(f'Outbound number {response["outbound_number"]} is not valid.')
+        return None
+    if (outbound_no != default_queue_outbound_no):
+        logger.info(
+            f"If the outbound number ({outbound_no}) is not claimed in your Amazon Connect instance, the number set for the default queue will be used ({default_queue_outbound_no})."
+        )
+
     return response

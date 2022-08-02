@@ -22,31 +22,32 @@ def lambda_handler(event, context):
 
     # If CreateTags failed nothing to do
     if 'errorCode' in event['detail']:
-        print('CreateTags failed with error code {} and error message "{}", nothing to do.'
-            .format(event['detail']['errorCode'], event['detail']['errorMessage']))
+        print(
+            f"""CreateTags failed with error code {event['detail']['errorCode']} and error message "{event['detail']['errorMessage']}", nothing to do."""
+        )
+
         return
 
     region = event['detail']['awsRegion']
     ec2 = boto3.client('ec2', region_name=region)
 
-    instance_ids = []
     is_instance = re.compile('i-[0-9a-f]+')
-    # Run instances may create several instances, then the event will contain 
-    # several instances
-    for item in event['detail']['requestParameters']['resourcesSet']['items']:
-        if is_instance.match(item['resourceId']):
-            instance_ids.append(item['resourceId'])
-    
+    instance_ids = [
+        item['resourceId']
+        for item in event['detail']['requestParameters']['resourcesSet'][
+            'items'
+        ]
+        if is_instance.match(item['resourceId'])
+    ]
+
     # check if we were tagging any instances
-    if len(instance_ids) == 0:
+    if not instance_ids:
         return
 
-    tags = []
-    for tag in event['detail']['requestParameters']['tagSet']['items']:
-        tags.append({
-            'Key': tag['key'],
-            'Value': tag['value']
-        })
+    tags = [
+        {'Key': tag['key'], 'Value': tag['value']}
+        for tag in event['detail']['requestParameters']['tagSet']['items']
+    ]
 
     # If the number of created instances then describe instances may be paginated
     paginator = ec2.get_paginator('describe_instances')
@@ -59,15 +60,19 @@ def lambda_handler(event, context):
         resources = []
         for reservation in page['Reservations']:
             for instance in reservation['Instances']:
-                for eni in instance['NetworkInterfaces']:
-                    resources.append(eni['NetworkInterfaceId'])
+                resources.extend(
+                    eni['NetworkInterfaceId']
+                    for eni in instance['NetworkInterfaces']
+                )
 
-                for volume in instance['BlockDeviceMappings']:
-                    if 'Ebs' in volume:
-                        resources.append(volume['Ebs']['VolumeId'])
+                resources.extend(
+                    volume['Ebs']['VolumeId']
+                    for volume in instance['BlockDeviceMappings']
+                    if 'Ebs' in volume
+                )
 
-        print("Tagging resorces for instance ids:\n[{}]".format(', '.join(instance_ids)))
-        print("Resources to be tagged:\n[{}]".format(', '.join(resources)))
+        print(f"Tagging resorces for instance ids:\n[{', '.join(instance_ids)}]")
+        print(f"Resources to be tagged:\n[{', '.join(resources)}]")
 
         ec2.create_tags(
             DryRun=False,
